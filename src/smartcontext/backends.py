@@ -8,16 +8,16 @@ class LlamaCppBackend:
         self.url = url
         self.max_predict = max_predict
 
-    def get_request_object(self, request_tokens, stream, temp, top_p):
+    def get_request_object(self, request_tokens, stream, temp, top_p, min_p, repeat_last_n, repeat_penalty):
         return {"prompt": request_tokens,
                 "stream": stream,
                 "n_predict": self.max_predict,
                 "temperature": temp,
-                "repeat_last_n": 0,
-                "repeat_penalty": 1.0,
+                "repeat_last_n": repeat_last_n,
+                "repeat_penalty": repeat_penalty,
                 "top_k": -1,
                 "top_p": top_p,
-                "min_p": 0,
+                "min_p": min_p,
                 "tfs_z": 1,
                 "typical_p": 1,
                 "presence_penalty": 0,
@@ -25,14 +25,14 @@ class LlamaCppBackend:
                 "stop": [self.stop_token, self.tokenizer.eos_token],
                 "cache_prompt": True}
 
-    def completion(self, request_tokens, temp=0.5, top_p=0.5):
-        request = self.get_request_object(request_tokens, False, temp, top_p)
+    def completion(self, request_tokens, temp=0.5, top_p=0.5, min_p=0.1, repeat_last_n=256, repeat_penalty=1.1):
+        request = self.get_request_object(request_tokens, False, temp, top_p, min_p, repeat_last_n, repeat_penalty)
         response = requests.post(self.url, json=request)
         response.raise_for_status()
         return response.json()["content"]
 
-    async def stream_completion(self, request_tokens, callback, temp=0.5, top_p=0.5):
-        request = self.get_request_object(request_tokens, True, temp, top_p)
+    async def stream_completion(self, request_tokens, callback, temp=0.5, top_p=0.5, min_p=0.1, repeat_last_n=256, repeat_penalty=1.1):
+        request = self.get_request_object(request_tokens, True, temp, top_p, min_p, repeat_last_n, repeat_penalty)
         response = requests.post(self.url, json=request, stream=True, headers={'Accept': 'text/event-stream'})
         response.raise_for_status()
         stream = sseclient.SSEClient(response).events()

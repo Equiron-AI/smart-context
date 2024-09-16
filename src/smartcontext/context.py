@@ -82,19 +82,19 @@ class SmartContext:
         self.tokens.append(self.tokenize(text))
         self._cut_context()  # Освобождаем место под ответ модели
 
-    def completion(self, temp=0.5, top_p=0.5):
+    def completion(self, temp=0.5, top_p=0.5, min_p=0.1, repeat_last_n=256, repeat_penalty=1.1):
         request_tokens = sum(self.tokens, [])
         request_tokens += self.generation_prompt_tokens
-        text_resp = self.llm_backend.completion(request_tokens, temp, top_p)
+        text_resp = self.llm_backend.completion(request_tokens, temp, top_p, min_p, repeat_last_n, repeat_penalty)
         response_tokens = self.tokenize(text_resp.strip() + self.stop_token)
         response_tokens = self.generation_prompt_tokens + response_tokens
         self.tokens.append(response_tokens)
         return text_resp
 
-    async def stream_completion(self, callback, temp=0.5, top_p=0.5):
+    async def stream_completion(self, callback, temp=0.5, top_p=0.5, min_p=0.1, repeat_last_n=256, repeat_penalty=1.1):
         request_tokens = sum(self.tokens, [])
         request_tokens += self.generation_prompt_tokens
-        text_resp = await self.llm_backend.stream_completion(request_tokens, callback, temp, top_p)
+        text_resp = await self.llm_backend.stream_completion(request_tokens, callback, temp, top_p, min_p, repeat_last_n, repeat_penalty)
         response_tokens = self.tokenize(text_resp.strip() + self.stop_token)
         response_tokens = self.generation_prompt_tokens + response_tokens
         self.tokens.append(response_tokens)
