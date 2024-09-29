@@ -34,11 +34,17 @@ class SmartContext:
                 self.tokens = [self.tokenizer(self.tokenizer.bos_token + f"<start_of_turn>system\n{prompt}<end_of_turn>\n")["input_ids"]]
                 self.stop_token = "<end_of_turn>"
             case "mistral":
-                self.generation_promp_template = " "
-                self.user_req_template = "[INST] {user_req}[/INST]"
-                self.first_user_req_template = " {user_req}[/INST]"
-                self.tokens = [self.tokenizer(f"[INST] {prompt}")["input_ids"]]
-                self.stop_token = "</s>"
+                # self.generation_promp_template = " "
+                # self.user_req_template = "[INST] {user_req}[/INST]"
+                # self.first_user_req_template = " {user_req}[/INST]"
+                # self.tokens = [self.tokenizer(f"[INST] {prompt}")["input_ids"]]
+                # self.stop_token = "</s>"
+                
+                self.generation_promp_template = "<|start_header_id|>assistant<|end_header_id|>\n\n"
+                self.user_req_template = "<|start_header_id|>user<|end_header_id|>\n\n{user_req}<|eot_id|>"
+                self.tokens = [self.tokenizer(f"<|start_header_id|>system<|end_header_id|>\n\n{prompt}<|eot_id|>")["input_ids"]]
+                self.stop_token = "<|eot_id|>"
+
             case _:
                 raise RuntimeError("Unknown model: " + config.model_type)
 
