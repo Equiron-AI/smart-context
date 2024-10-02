@@ -8,10 +8,11 @@ logger = logging.getLogger(__name__)
 
 
 class SmartContext:
-    def __init__(self, llm_backend, base_model, max_context=4096, prompt="", prompt_file=""):
+    def __init__(self, llm_backend, base_model, max_context=4096, prompt="", prompt_file="", cut_context_multiplier=8):
         self.tokenizer = AutoTokenizer.from_pretrained(base_model, add_bos_token=False)
         self.max_context = max_context
         self.max_predict = llm_backend.max_predict
+        self.cut_context_multiplier = cut_context_multiplier
 
         if prompt_file:
             with open(prompt_file) as f:
@@ -34,16 +35,17 @@ class SmartContext:
                 self.tokens = [self.tokenizer(self.tokenizer.bos_token + f"<start_of_turn>system\n{prompt}<end_of_turn>\n")["input_ids"]]
                 self.stop_token = "<end_of_turn>"
             case "mistral":
-                # self.generation_promp_template = " "
-                # self.user_req_template = "[INST] {user_req}[/INST]"
-                # self.first_user_req_template = " {user_req}[/INST]"
-                # self.tokens = [self.tokenizer(f"[INST] {prompt}")["input_ids"]]
-                # self.stop_token = "</s>"
-                
-                self.generation_promp_template = "<|start_header_id|>assistant<|end_header_id|>\n\n"
-                self.user_req_template = "<|start_header_id|>user<|end_header_id|>\n\n{user_req}<|eot_id|>"
-                self.tokens = [self.tokenizer(f"<|start_header_id|>system<|end_header_id|>\n\n{prompt}<|eot_id|>")["input_ids"]]
-                self.stop_token = "<|eot_id|>"
+                self.generation_promp_template = " "
+                self.user_req_template = "[INST] {user_req}[/INST]"
+                self.first_user_req_template = " {user_req}[/INST]"
+                self.tokens = [self.tokenizer(f"[INST] {prompt}")["input_ids"]]
+                self.stop_token = "</s>"
+            case "qwen2":
+                self.generation_promp_template = "<|im_start|>assistant\n"
+                self.user_req_template = "<|im_start|>user\n{user_req}<|im_end|>\n"
+                self.system_injection_template = "<|im_start|>system\n{system_injection}<|im_end|>\n"
+                self.tokens = [self.tokenizer.apply_chat_template([{"role": "system", "content": prompt}])]
+                self.stop_token = "<|im_end|>"
 
             case _:
                 raise RuntimeError("Unknown model: " + config.model_type)
@@ -124,11 +126,9 @@ class SmartContext:
         busy_tokens = len(sum(self.tokens, []))
         free_tokens = self.max_context - busy_tokens
         if free_tokens < self.max_predict:
-            while free_tokens < self.max_predict * 8:  # обрезаем с большим запасом, чтобы кеш контекста работал лучше
+            while free_tokens < self.max_predict * self.cut_context_multiplier:  # обрезаем с большим запасом, чтобы кеш контекста работал лучше
                 free_tokens += len(self.tokens[1])
-                del self.tokens[1]  # del user request
-                free_tokens += len(self.tokens[1])
-                del self.tokens[1]  # del model response
+                del self.tokens[1]
 
     def clear_context(self):
         del self.tokens[1:]

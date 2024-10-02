@@ -6,7 +6,7 @@ conda env create -f environment.yml
 
 ## Installation
 ```console
-pip install lmtools
+pip install smart-context
 ```
 
 ## Supported Models
@@ -14,6 +14,7 @@ The following LLM models are supported:
 - CohereForAI/c4ai-command-r-08-2024
 - google/gemma-2-27b-it
 - mistralai/Mistral-Large-Instruct-2407
+- Qwen/Qwen2.5-32B-Instruct
 
 ## LLM backends
 The following LLM backends are supported:
