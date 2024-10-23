@@ -40,3 +40,10 @@ export PATH=${CUDA_HOME}/bin:${PATH}
 export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:$LD_LIBRARY_PATH
 ' >> ~/.bashrc
 ```
+
+## Set GPU Max Temp
+```console
+nvidia-smi -pm 1
+sudo nvidia-smi -gtt 80
+nvidia-smi -q | grep Target
+```
