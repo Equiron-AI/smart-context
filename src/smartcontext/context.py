@@ -8,10 +8,10 @@ logger = logging.getLogger(__name__)
 
 
 class SmartContext:
-    def __init__(self, llm_backend, base_model, max_context=4096, prompt="", prompt_file="", cut_context_multiplier=8):
+    def __init__(self, llm_backend, base_model, max_context=4096, prompt="", prompt_file="", cut_context_multiplier=1):
         self.tokenizer = AutoTokenizer.from_pretrained(base_model, add_bos_token=False)
-        self.max_context = max_context
         self.max_predict = llm_backend.max_predict
+        self.max_context = max_context
         self.cut_context_multiplier = cut_context_multiplier
 
         if prompt_file:
