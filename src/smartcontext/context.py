@@ -8,11 +8,12 @@ logger = logging.getLogger(__name__)
 
 
 class SmartContext:
-    def __init__(self, llm_backend, base_model, max_context=4096, prompt="", prompt_file="", cut_context_multiplier=1):
+    def __init__(self, llm_backend, base_model, max_context=4096, prompt="", prompt_file="", cut_context_multiplier=1, cut_from=1):
         self.tokenizer = AutoTokenizer.from_pretrained(base_model, add_bos_token=False)
         self.max_predict = llm_backend.max_predict
         self.max_context = max_context
         self.cut_context_multiplier = cut_context_multiplier
+        self.cut_from = cut_from
 
         if prompt_file:
             with open(prompt_file) as f:
@@ -116,19 +117,19 @@ class SmartContext:
     def save_context(self, file_name):
         with open(file_name, "w") as f:
             json.dump(self.tokens, f)
-                
+
     def dump_context(self, file_name):
         with open(file_name, "w") as f:
             flat_tokens = sum(self.tokens, [])
-            f.write(self.tokenizer.decode(flat_tokens))                
+            f.write(self.tokenizer.decode(flat_tokens))
 
     def _cut_context(self):
         busy_tokens = len(sum(self.tokens, []))
         free_tokens = self.max_context - busy_tokens
         if free_tokens < self.max_predict:
             while free_tokens < self.max_predict * self.cut_context_multiplier:  # обрезаем с большим запасом, чтобы кеш контекста работал лучше
-                free_tokens += len(self.tokens[1])
-                del self.tokens[1]
+                free_tokens += len(self.tokens[self.cut_from])
+                del self.tokens[self.cut_from]
 
     def clear_context(self):
         del self.tokens[1:]
