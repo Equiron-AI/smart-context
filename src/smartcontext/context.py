@@ -20,7 +20,6 @@ class SmartContext:
                 prompt = f.read()
 
         config = AutoConfig.from_pretrained(base_model)
-        self.first_user_req_template = None
 
         match config.model_type:
             case "cohere":
@@ -36,11 +35,11 @@ class SmartContext:
                 self.tokens = [self.tokenizer(self.tokenizer.bos_token + f"<start_of_turn>system\n{prompt}<end_of_turn>\n")["input_ids"]]
                 self.stop_token = "<end_of_turn>"
             case "mistral":
-                self.generation_promp_template = " "
-                self.user_req_template = "[INST] {user_req}[/INST]"
-                self.first_user_req_template = " {user_req}[/INST]"
-                self.tokens = [self.tokenizer(f"[INST] {prompt}")["input_ids"]]
-                self.stop_token = "</s>"
+                self.generation_promp_template = "<|im_start|>assistant\n"
+                self.user_req_template = "<|im_start|>user\n{user_req}<|im_end|>\n"
+                self.system_injection_template = "<|im_start|>system\n{system_injection}<|im_end|>\n"
+                self.tokens = [self.tokenizer(self.tokenizer.bos_token + f"<|im_start|>system\n{prompt}<|im_end|>\n")["input_ids"]]
+                self.stop_token = "<|im_end|>"
             case "qwen2":
                 self.generation_promp_template = "<|im_start|>assistant\n"
                 self.user_req_template = "<|im_start|>user\n{user_req}<|im_end|>\n"
@@ -76,10 +75,7 @@ class SmartContext:
                    .replace("[/INST]", "")
 
     def add_user_request(self, user_request, system_injection="", unsanitized_raw_postfix=""):
-        if self.first_user_req_template and len(self.tokens) == 1:
-            text = self.first_user_req_template.replace("{user_req}", self.sanitize(user_request.strip()) + unsanitized_raw_postfix)
-        else:
-            text = self.user_req_template.replace("{user_req}", self.sanitize(user_request.strip()) + unsanitized_raw_postfix)
+        text = self.user_req_template.replace("{user_req}", self.sanitize(user_request.strip()) + unsanitized_raw_postfix)
         if system_injection:
             text += self.system_injection_template.replace("{system_injection}", system_injection)
         tokens = self.tokenize(text)
