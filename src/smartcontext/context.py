@@ -21,34 +21,26 @@ class SmartContext:
 
         config = AutoConfig.from_pretrained(base_model)
 
-        match config.model_type:
-            case "cohere":
-                self.generation_promp_template = "<|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>"
-                self.user_req_template = "<|START_OF_TURN_TOKEN|><|USER_TOKEN|>{user_req}<|END_OF_TURN_TOKEN|>"
-                self.system_injection_template = "<|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>{system_injection}<|END_OF_TURN_TOKEN|>"
-                self.tokens = [self.tokenizer.apply_chat_template([{"role": "system", "content": prompt}])]
-                self.stop_token = self.tokenizer.eos_token
-            case "gemma2":
-                self.generation_promp_template = "<start_of_turn>model\n"
-                self.user_req_template = "<start_of_turn>user\n{user_req}<end_of_turn>\n"
-                self.system_injection_template = "<start_of_turn>system\n{system_injection}<end_of_turn>\n"
-                self.tokens = [self.tokenizer(self.tokenizer.bos_token + f"<start_of_turn>system\n{prompt}<end_of_turn>\n")["input_ids"]]
-                self.stop_token = "<end_of_turn>"
-            case "mistral":
-                self.generation_promp_template = "<|im_start|>assistant\n"
-                self.user_req_template = "<|im_start|>user\n{user_req}<|im_end|>\n"
-                self.system_injection_template = "<|im_start|>system\n{system_injection}<|im_end|>\n"
-                self.tokens = [self.tokenizer(self.tokenizer.bos_token + f"<|im_start|>system\n{prompt}<|im_end|>\n")["input_ids"]]
-                self.stop_token = "<|im_end|>"
-            case "qwen2":
-                self.generation_promp_template = "<|im_start|>assistant\n"
-                self.user_req_template = "<|im_start|>user\n{user_req}<|im_end|>\n"
-                self.system_injection_template = "<|im_start|>system\n{system_injection}<|im_end|>\n"
-                self.tokens = [self.tokenizer.apply_chat_template([{"role": "system", "content": prompt}])]
-                self.stop_token = "<|im_end|>"
-
-            case _:
-                raise RuntimeError("Unknown model: " + config.model_type)
+        if config.model_type.startswith("cohere"):
+            self.generation_promp_template = "<|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>"
+            self.user_req_template = "<|START_OF_TURN_TOKEN|><|USER_TOKEN|>{user_req}<|END_OF_TURN_TOKEN|>"
+            self.system_injection_template = "<|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>{system_injection}<|END_OF_TURN_TOKEN|>"
+            self.tokens = [self.tokenizer.apply_chat_template([{"role": "system", "content": prompt}])]
+            self.stop_token = self.tokenizer.eos_token
+        elif config.model_type.startswith("gemma"):
+            self.generation_promp_template = "<start_of_turn>model\n"
+            self.user_req_template = "<start_of_turn>user\n{user_req}<end_of_turn>\n"
+            self.system_injection_template = "<start_of_turn>system\n{system_injection}<end_of_turn>\n"
+            self.tokens = [self.tokenizer(self.tokenizer.bos_token + f"<start_of_turn>system\n{prompt}<end_of_turn>\n")["input_ids"]]
+            self.stop_token = "<end_of_turn>"
+        elif config.model_type.startswith("mistral") or config.model_type.startswith("qwen"):
+            self.generation_promp_template = "<|im_start|>assistant\n"
+            self.user_req_template = "<|im_start|>user\n{user_req}<|im_end|>\n"
+            self.system_injection_template = "<|im_start|>system\n{system_injection}<|im_end|>\n"
+            self.tokens = [self.tokenizer(f"<|im_start|>system\n{prompt}<|im_end|>\n")["input_ids"]]
+            self.stop_token = "<|im_end|>"
+        else:
+            raise RuntimeError("Unknown model: " + config.model_type)
 
         self.llm_backend = llm_backend
         self.llm_backend.stop_token = self.stop_token
